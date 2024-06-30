@@ -12,10 +12,15 @@ def fetch_iss_location():
             if response.status_code == 429:
                 print("Rate limit exceeded. Waiting before retrying...")
                 time.sleep(60)  # Wait for 1 minute if rate limited
+                retries += 1
                 continue
             response.raise_for_status()  # Raise an error for bad responses
             data = response.json()
-            return data['timestamp'], data['iss_position']['latitude'], data['iss_position']['longitude']
+            if 'timestamp' in data and 'iss_position' in data and 'latitude' in data['iss_position'] and 'longitude' in data['iss_position']:
+                return data['timestamp'], data['iss_position']['latitude'], data['iss_position']['longitude']
+            else:
+                print("Unexpected data format received.")
+                return None, None, None
         except requests.exceptions.RequestException as e:
             retries += 1
             print(f"Attempt {retries} failed: {e}")
@@ -29,8 +34,8 @@ def fetch_iss_location():
 
 # Function to write ISS location data to CSV file
 def write_to_csv(records=100):
-    with open('iss_location_data.csv', 'w') as file:
-        file.write("Timestamp,Latitude,Longitude\n")  # Write header
+    with open('iss_location_data.csv', 'w') as file:  # Use 'a' for append mode if needed
+        file.write("Timestamp,Latitude,Longitude\n")  # Write header if file is new
         for _ in range(records):
             timestamp, latitude, longitude = fetch_iss_location()
             if timestamp is not None:
